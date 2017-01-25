@@ -1,24 +1,4 @@
 ## Advanced Lane Finding
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
-
-The goals / steps of this project are the following:  
-
-* Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
-* Apply the distortion correction to the raw image.  
-* Use color transforms, gradients, etc., to create a thresholded binary image.
-* Apply a perspective transform to rectify binary image ("birds-eye view"). 
-* Detect lane pixels and fit to find lane boundary.
-* Determine curvature of the lane and vehicle position with respect to center.
-* Warp the detected lane boundaries back onto the original image.
-* Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
-
----
-
-The images for camera calibration are stored in the folder called `camera_cal`.  The images in `test_images` are for testing your pipeline on single frames.  To help the reviewer examine your work, please save examples of the output from each stage of your pipeline in the folder called `ouput_images`, and include a description in the README for the project of what each image shows.    The video called `project_video.mp4` is the video your pipeline should work well on.  
-
-The `challenge_video.mp4` video is an extra (and optional) challenge for you if you want to test your pipeline under somewhat trickier conditions.  The `harder_challenge.mp4` video is another optional challenge and is brutal!
-
-If you're feeling ambitious (again, totally optional though), don't stop there!  We encourage you to go out and take video of your own, calibrate your camera and show us how you would implement this project from scratch!
 
 ##Camera Calibration
 
@@ -89,7 +69,8 @@ For the perspective transform , we have used the function
 
 Following is an example of the image and the perspective transformed image
 
-![alt tag](output_images/undist_test5.jpg)
+
+![alt_tag](output_images/undist_test5.jpg)
 
 ![alt tag](output_images/warped_img.jpg)
 
@@ -102,11 +83,139 @@ dst=np.float32([(265,720),(1130,720),(1130,0),(265,0)])
 
 ### Lane detection algorithm
 
+#####Datastructures
+
+We have modelled the Lane Lines using the following DataStructures
+
+######Line Class
+```
+class Line():
+    def __init__(self):
+        # was the line detected in the last iteration?
+        self.detected = False  
+        # x values of the last n fits of the line
+        self.recent_xfitted = [] 
+        #average x values of the fitted line over the last n iterations
+        self.bestx = None     
+        #polynomial coefficients averaged over the last n iterations
+        self.best_fit = None  
+        #polynomial coefficients for the most recent fit
+        self.current_fit = [np.array([False])]  
+        #radius of curvature of the line in some units
+        self.radius_of_curvature = None 
+        #distance in meters of vehicle center from the line
+        self.line_base_pos = None 
+        #difference in fit coefficients between last and new fits
+        self.diffs = np.array([0,0,0], dtype='float') 
+        #x values for detected line pixels
+        self.allx = None  
+        #y values for detected line pixels
+        self.ally = None
+        self.param0 = []
+        self.param1 = []
+        self.param2 = []
+        self.index = 0 
+        self.limit = 10
+```
+###### Vehicle Class
+```
+class Vehicle():
+    def __init__(self):
+        #The Left Line 
+        self.leftLine = Line()
+        
+        #The Right Line
+        self.rightLine = Line()
+        
+        #A polygon that determines the detected lane section
+        self.polygon = None
+
+```
+
+* The Line class is mainly used to store the historical data for the line. 
+* We store an array of previous lane information. This information will be used later in our algorithm
+that is described in the section below
+
+
+##### Lane detection algorithm
+
 For the lane detection section, we have followed the following steps 
-* Undistort the image using the distortion parameters
-* Convert the image to a binary threshold image using the threshold pipeline
+
+![alt tag](output_images/raw_image.png)
+ 
+* Undistort the image using the distortion parameters 
+
+* Convert the image to a binary threshold image using the threshold pipeline 
+
+![alt tag](output_images/binary_image.png)
+
 * Perform a perspective transform using the `warped` function
 * Now we have a binary thresholded and perspective transformed image. 
-* We divide the image into 2 sections, into left and right sections. 
-* For each section , we divide the image into 100 sections. 
-* We perform a histogram on the image to detect the x coordinate of the lane line
+* We apply erode and dilate functions on the perspective transformed image to remove potential 
+noise points in the image.
+
+![alt tag](output_images/perspective_transform.png)
+
+* We divide the image into 2 sections vertically, into left and right sections. 
+* For each section , we divide the image horizontally into 100 sections . 
+* We perform a histogram that detects the coordinates of the likely point on the lane.
+* The function `getleftLanes(warped,minLimit,maxLimit)` and `getrightLanes(warped,minLimit,maxLimit)`
+are used to let the likely left and right lane points.
+
+![alt tag](output_images/line_detection.png)
+
+
+* We have used a polyfit function to fit the line using a 2nd degree polynomial
+
+![alt tag](output_images/polynomial_img.png)
+
+* Using the potential line parameters, we calculate the curvature of both the left 
+and right lane lines. Also we use the pixel to meters conversion to detect the left lane and 
+the right lane radius. 
+```
+left_curverad = ((1 + (2*left_fit_cr[0]*y_eval + left_fit_cr[1])**2)**1.5) \
+                                 /np.absolute(2*left_fit_cr[0])
+right_curverad = ((1 + (2*right_fit_cr[0]*y_eval + right_fit_cr[1])**2)**1.5) \
+                                    /np.absolute(2*right_fit_cr[0])                                    
+```
+* Next we determine if the lane detected make sense or not . 
+* We know from the US government [database](http://onlinemanuals.txdot.gov/txdotmanuals/rdw/horizontal_alignment.htm#BGBHGEGC)
+that the radius of turn cannot be below a certain value. We have used a minimum radius of 5000 m 
+ for the test
+* If the radius of either the left or right radius is below this minimum value, then it means 
+that one of the lanes is detecting a turn. 
+* If any lane detects a turn, then both the lanes should point to a turn. If the 2 turns point to a turn and 
+if the difference between both the lane's radius is less than 2000 m , then we know that the both the lanes are detected correctly.
+* If the lane is detected correctly, we add this line's data to our Line class's data.
+* If the lane is not detected correctly, we do not add this line's data cache.
+* The data in the Line class is a moving average of the previously detected Lane lines.
+* The moving average is of size 10 . 
+* When we finally decide to plot the polygon for the Line detection, we use the average of the line's 
+polygon data to decide the final line data. 
+* Using this mechanism allows us to smoothly plot the polygon and makes the detection more resilient to 
+infrequent incorrect detections that occur in an image with a shadow or when the color of the road changes etc.
+* At last, we plot the information on the image.
+* If we detect the lane line successfully, we use the term *Locked* and if we dont detect the image successfully,
+we use the term *Lost* on the image.
+* We have plotted the results on the python notebook.
+
+![alt tag](output_images/final_result.png)
+
+This is a link to my [video result](output.mp4)
+
+
+### Discussion 
+
+This was one of the more challenging projects. 
+
+Image processing is not easy and simple common things that happen in the 
+real world such as shadows, different lighting conditions , different road conditions , different times of the day, unmarked roads, 
+construction zones, rain , road reflections off water etc all pose challenges in correct line detection. 
+
+Image processing can be one of the ways to detect lanes but definitely not the only way. I have used a very simplistic model to detect 
+lane prediction with confidence but it is not the best model. More work is required to detect if the lane detected is correct or not. 
+
+The current pipeline does not work very well with the challenge video. 
+
+
+
