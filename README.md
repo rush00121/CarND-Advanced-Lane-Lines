@@ -224,6 +224,7 @@ we use the term *Lost* on the image.
 
 This is a link to my [video result](output.mp4)
 
+This is a link posted on [youtube](https://www.youtube.com/watch?v=CVzUjia7WW0&feature=youtu.be)
 
 ### Discussion 
 
