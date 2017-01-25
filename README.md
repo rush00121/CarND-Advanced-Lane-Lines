@@ -194,6 +194,8 @@ if the difference between both the lane's radius is less than 2000 m , then we k
 polygon data to decide the final line data. 
 * Using this mechanism allows us to smoothly plot the polygon and makes the detection more resilient to 
 infrequent incorrect detections that occur in an image with a shadow or when the color of the road changes etc.
+* We superimpose the polygon onto the perspective transformed image
+![alt tag](output_images/perspective_transform_2.png)
 * At last, we plot the information on the image.
 * To get the distance of the vehicle from the center of the road, we use the following logic.
 * We get the 2 bottom points of both right and left lane lines. 
@@ -215,6 +217,7 @@ screen_middel_pixel = img.shape[1]/2
   
 
 ```
+* We use the inverse perspective transform to convert the image back to the original perspective.
 
 * If we detect the lane line successfully, we use the term *Locked* and if we dont detect the image successfully,
 we use the term *Lost* on the image.
