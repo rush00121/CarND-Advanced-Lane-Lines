@@ -233,14 +233,12 @@ This is a link posted on [youtube](https://www.youtube.com/watch?v=CVzUjia7WW0&f
 
 This was one of the more challenging projects. 
 
-Image processing is not easy and simple common things that happen in the 
-real world such as shadows, different lighting conditions , different road conditions , different times of the day, unmarked roads, 
-construction zones, rain , road reflections off water etc all pose challenges in correct line detection. 
+Image processing is not easy and simple common things that happen in the real world such as shadows, different lighting conditions , different road conditions , different times of the day, unmarked roads, construction zones, rain, road reflections off water etc all pose challenges in correct lane detection. 
 
 Image processing can be one of the ways to detect lanes but definitely not the only way. I have used a very simplistic model to detect 
 lane prediction with confidence but it is not the best model. More work is required to detect if the lane detected is correct or not. 
 
-The current pipeline does not work very well with the challenge video. 
+The current pipeline does not work very well with the challenge video. There needs to be more preprocessing in orders to discard the shadows and different road colors in order to clearly identify the correct road markings. Also, I need to improve the logic for detecting lane markings to disregard false positives and identify the lane in case there are more than 1 potential lines that can be the lane markings.Maybe it is a good idea to use additional image information such as the horizon, structure identification such as trees or bridges that can be used to disregard or consider potential lane markings. These are all open issues that I feel need to be addressed and can lead to better lane detection. 
 
 
 
