@@ -195,6 +195,27 @@ polygon data to decide the final line data.
 * Using this mechanism allows us to smoothly plot the polygon and makes the detection more resilient to 
 infrequent incorrect detections that occur in an image with a shadow or when the color of the road changes etc.
 * At last, we plot the information on the image.
+* To get the distance of the vehicle from the center of the road, we use the following logic.
+* We get the 2 bottom points of both right and left lane lines. 
+* Using that information, we get the center pixel of the lane according to our calculations. 
+* We take the difference of that with the center of the image . 
+* The assumption is that the camera is located on the center of the car. 
+* Using the difference in pixel space, we convert that to meters. 
+
+```
+ # Define conversions in x and y from pixels space to meters
+    ym_per_pix = 30/720 # meters per pixel in y dimension
+    xm_per_pix = 3.7/700 # meteres per pixel in x dimension
+  
+
+screen_middel_pixel = img.shape[1]/2
+    car_middle_pixel = int((right_lane_start + left_lane_start)/2)
+    screen_off_center = screen_middel_pixel-car_middle_pixel
+    meters_off_center = abs(xm_per_pix * screen_off_center)
+  
+
+```
+
 * If we detect the lane line successfully, we use the term *Locked* and if we dont detect the image successfully,
 we use the term *Lost* on the image.
 * We have plotted the results on the python notebook.
